@@ -1,2 +1,5 @@
 .DS_Store
 .claude/settings.local.json
+
+# Third-party brand artwork dropped into the folder — not ours to publish.
+images.png

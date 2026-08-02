@@ -37,7 +37,22 @@
     busyMin: 1100,
     loadTimers: [],
     cardTimer: null,
-    cardLoading: false
+    cardLoading: false,
+    revealed: false,
+    revealTimer: null,
+    stream: null,
+    scanMode: null,
+    scanOpen: false,
+    autoBioTried: false,
+    suppressAutoBio: false,
+    leaving: false
+  };
+
+  var SCAN_MODES = {
+    transfer: { title: 'scan.transfer.title', hint: 'scan.transfer.hint' },
+    topup:    { title: 'scan.topup.title',    hint: 'scan.topup.hint' },
+    payments: { title: 'scan.payments.title', hint: 'scan.payments.hint' },
+    qr:       { title: 'scan.qr.title',       hint: 'scan.qr.hint' }
   };
 
   /* ---------------------------------------------------------------- utils */
@@ -131,14 +146,64 @@
     updateChrome();
   }
 
-  function push(name) {
-    state.history.push(state.screen);
-    go(name, 'push');
+  /* ---------------------------------------------------------------------
+   * Navigation is mirrored into the browser history so that the platform
+   * back gesture — Android's back, iOS's swipe from the screen edge —
+   * moves inside the app instead of leaving it. There is always one spare
+   * history entry, so the last back is intercepted and confirmed rather
+   * than closing the app outright.
+   * ------------------------------------------------------------------- */
+
+  function guardHistory() {
+    try { history.pushState({ app: true }, ''); } catch (e) { /* ignore */ }
   }
 
+  function resetNavigation() {
+    state.history = [];
+    try {
+      history.replaceState({ app: true }, '');
+      guardHistory();
+    } catch (e) { /* ignore */ }
+  }
+
+  function push(name, mode) {
+    if (name === state.screen) return;
+    state.history.push(state.screen);
+    guardHistory();
+    go(name, mode || 'push');
+  }
+
+  /* Hands control to the browser; the popstate handler does the work, so
+     the in-app back button and the system gesture share one code path. */
   function back() {
-    var previous = state.history.pop() || 'dashboard';
-    go(previous, 'pop');
+    history.back();
+  }
+
+  function onPopState() {
+    /* Anything layered on top is dismissed first. */
+    if (state.scanOpen) { closeScanner(); guardHistory(); return; }
+    if (state.sheet) { closeSheet(); guardHistory(); return; }
+
+    if (state.history.length) {
+      go(state.history.pop(), 'pop');
+      return;
+    }
+
+    /* Nothing left to go back to — ask before letting go. */
+    guardHistory();
+    if (state.screen !== 'loading') openSheet('sheet-exit');
+  }
+
+  function leaveApp() {
+    state.leaving = true;
+    closeSheet(true);
+    try { window.close(); } catch (e) { /* not script-opened */ }
+    /* window.close() only works for windows opened by script, so in a tab
+       or an installed PWA the OS stays in charge — say so plainly. */
+    setTimeout(function () {
+      state.leaving = false;
+      toast(t('exit.manual'), 'info');
+    }, 400);
   }
 
   function updateChrome() {
@@ -164,7 +229,10 @@
     $('#card-balance').textContent = fmt.withCurrency(D.card.balance);
     $('#card-valid').textContent = D.card.valid;
 
-    $$('[data-card-number]').forEach(function (n) { n.textContent = D.card.masked; });
+    $$('[data-card-number]').forEach(function (n) {
+      n.textContent = state.revealed ? D.card.number : D.card.masked;
+    });
+    $('#card-cvv').textContent = state.revealed ? D.card.cvv : '•••';
     $$('[data-card-balance]').forEach(function (n) {
       n.textContent = fmt.withCurrency(D.card.balance);
     });
@@ -451,6 +519,22 @@
 
   /* --------------------------------------------------------------- sheets */
 
+  /* Hides a node once its exit animation ends, with a timer fallback:
+     animationend never fires while the page is backgrounded, which would
+     otherwise strand the overlay on screen and swallow back gestures. */
+  function hideAfterExit(node, done) {
+    var finished = false;
+    var finish = function () {
+      if (finished) return;
+      finished = true;
+      node.hidden = true;
+      node.classList.remove('is-hiding');
+      if (done) done();
+    };
+    node.addEventListener('animationend', finish, { once: true });
+    setTimeout(finish, 340);
+  }
+
   function openSheet(id) {
     closeSheet(true);
     var sheet = $('#' + id);
@@ -476,14 +560,8 @@
 
     sheet.classList.add('is-hiding');
     scrim.classList.add('is-hiding');
-    sheet.addEventListener('animationend', function () {
-      sheet.hidden = true;
-      sheet.classList.remove('is-hiding');
-    }, { once: true });
-    scrim.addEventListener('animationend', function () {
-      scrim.hidden = true;
-      scrim.classList.remove('is-hiding');
-    }, { once: true });
+    hideAfterExit(sheet);
+    hideAfterExit(scrim);
   }
 
   function detailRow(label, value) {
@@ -540,6 +618,113 @@
     body.appendChild(cta);
 
     openSheet('sheet-product');
+  }
+
+  /* -------------------------------------------------------- card details */
+
+  function setReveal(on) {
+    clearTimeout(state.revealTimer);
+    state.revealed = on;
+
+    $('#bankcard-detail').classList.toggle('is-revealed', on);
+    $('#btn-reveal').setAttribute('aria-pressed', on ? 'true' : 'false');
+    $('#reveal-icon').setAttribute('href', on ? '#i-eye-off' : '#i-eye');
+
+    $$('[data-card-number]').forEach(function (n) {
+      n.textContent = on ? D.card.number : D.card.masked;
+    });
+    $('#card-cvv').textContent = on ? D.card.cvv : '•••';
+
+    /* Don't leave the full number sitting on screen. */
+    if (on) {
+      state.revealTimer = setTimeout(function () {
+        setReveal(false);
+        toast(t('card.hidden'), 'info');
+      }, 20000);
+    }
+  }
+
+  function copyCardNumber() {
+    var plain = D.card.number.replace(/\s/g, '');
+    var done = function () { toast(t('card.copied')); };
+    var failed = function () { toast(t('card.copyFailed'), 'info'); };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(plain).then(done).catch(failed);
+      return;
+    }
+    failed();
+  }
+
+  /* ------------------------------------------------------------- scanner */
+
+  function showScanError(titleKey, textKey) {
+    var node = $('#scanner');
+    node.classList.add('has-error');
+    $('#scanner-error-title').textContent = t(titleKey);
+    $('#scanner-error-text').textContent = t(textKey);
+    $('#scanner-error').hidden = false;
+  }
+
+  function startCamera() {
+    var cfg = SCAN_MODES[state.scanMode] || SCAN_MODES.qr;
+    var video = $('#scanner-video');
+
+    $('#scanner').classList.remove('has-error');
+    $('#scanner-error').hidden = true;
+    $('#scanner-hint').textContent = t('scan.starting');
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showScanError('scan.unavailable', 'scan.deniedHint');
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false
+    }).then(function (stream) {
+      state.stream = stream;
+      video.srcObject = stream;
+      var playing = video.play();
+      if (playing && playing.catch) playing.catch(function () { /* autoplay guard */ });
+      $('#scanner-hint').textContent = t(cfg.hint);
+    }).catch(function (err) {
+      var denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+      showScanError(denied ? 'scan.denied' : 'scan.unavailable', 'scan.deniedHint');
+      console.warn('[camera]', err);
+    });
+  }
+
+  function openScanner(mode) {
+    state.scanMode = mode;
+    state.scanOpen = true;
+    var node = $('#scanner');
+    $('#scanner-title').textContent = t(SCAN_MODES[mode].title);
+    node.hidden = false;
+    node.classList.remove('is-hiding');
+    /* So the back gesture closes the viewfinder before anything else. */
+    guardHistory();
+    startCamera();
+  }
+
+  function stopCamera() {
+    if (state.stream) {
+      state.stream.getTracks().forEach(function (track) { track.stop(); });
+      state.stream = null;
+    }
+    var video = $('#scanner-video');
+    video.pause();
+    video.srcObject = null;
+  }
+
+  function closeScanner() {
+    if (!state.scanOpen) return;
+    /* Flip the flag first: routing decisions must not wait on the animation. */
+    state.scanOpen = false;
+    stopCamera();
+    var node = $('#scanner');
+    node.classList.add('is-hiding');
+    hideAfterExit(node);
   }
 
   /* ------------------------------------------------------------ statement */
@@ -620,15 +805,21 @@
     return new Promise(function (resolve) { setTimeout(resolve, 2000); });
   }
 
-  function runBiometrics() {
+  function runBiometrics(auto) {
     var scanner = $('#btn-biometric');
-    if (scanner.dataset.busy === '1') return;
+    /* A second tap withdraws a request the user never answered. */
+    if (scanner.dataset.busy === '1') {
+      if (!auto) global.Biometrics.abort();
+      return;
+    }
 
     scanner.dataset.busy = '1';
     scanner.classList.remove('is-done', 'is-failed');
     scanner.classList.add('is-scanning');
     setLoginStatus('login.scanning');
     $('#btn-login').disabled = true;
+
+    var promptedAt = 0;
 
     global.Biometrics.available().then(function (hasPlatformAuth) {
       if (!hasPlatformAuth) {
@@ -640,6 +831,7 @@
       scanner.classList.remove('is-scanning');
       scanner.classList.add('is-waiting');
       setLoginStatus('login.prompt');
+      promptedAt = Date.now();
       return global.Biometrics.authenticate(D.user.fullName[i18n.lang]);
     }).then(function () {
       scanner.classList.remove('is-scanning', 'is-waiting');
@@ -648,15 +840,34 @@
       setTimeout(showLoading, 520);
     }).catch(function (err) {
       scanner.classList.remove('is-scanning', 'is-waiting');
-      scanner.classList.add('is-failed');
       scanner.dataset.busy = '';
       $('#btn-login').disabled = false;
 
-      var cancelled = err && err.name === 'NotAllowedError';
+      /* Safari only allows WebAuthn from a user gesture. On the automatic
+         attempt an instant rejection means the system sheet never opened,
+         so fall back to the button rather than blaming the user. */
+      var instant = promptedAt && Date.now() - promptedAt < 400;
+      if (auto && instant) {
+        setLoginStatus('login.hint');
+        return;
+      }
+
+      scanner.classList.add('is-failed');
+      var cancelled = err && (err.name === 'NotAllowedError' || err.name === 'AbortError');
       setLoginStatus(cancelled ? 'login.cancelled' : 'login.failed', 'error');
       toast(t(cancelled ? 'login.cancelled' : 'login.failed'), 'info');
       if (!cancelled) console.warn('[biometrics]', err);
     });
+  }
+
+  /* Ask for biometrics as soon as the login screen settles, without
+     waiting for the button. Skipped right after an explicit sign-out. */
+  function maybeAutoBiometrics() {
+    if (state.autoBioTried || state.suppressAutoBio) return;
+    state.autoBioTried = true;
+    setTimeout(function () {
+      if (state.screen === 'login') runBiometrics(true);
+    }, 700);
   }
 
   var LOADING_MS = 5000;
@@ -688,8 +899,8 @@
     });
 
     state.loadTimers.push(setTimeout(function () {
-      state.history = [];
       go('dashboard');
+      resetNavigation();
       toast(t('toast.login'));
       resetLogin();
     }, LOADING_MS));
@@ -705,12 +916,16 @@
 
   function logout() {
     closeSheet(true);
+    closeScanner();
+    setReveal(false);
     state.loadTimers.forEach(clearTimeout);
     state.loadTimers = [];
     clearTimeout(state.cardTimer);
     state.cardLoading = false;
-    state.history = [];
+    /* Signing out on purpose shouldn't immediately re-prompt for a finger. */
+    state.suppressAutoBio = true;
     go('login');
+    resetNavigation();
     resetLogin();
     toast(t('toast.logout'));
   }
@@ -745,6 +960,12 @@
   function bindEvents() {
     /* Global delegation for simple, repeated intents. */
     document.addEventListener('click', function (event) {
+      var scan = event.target.closest('[data-scan]');
+      if (scan) { openScanner(scan.dataset.scan); return; }
+
+      var reveal = event.target.closest('[data-reveal]');
+      if (reveal) { setReveal(!state.revealed); return; }
+
       var soon = event.target.closest('[data-soon]');
       if (soon) { toast(t('common.soon'), 'info'); return; }
 
@@ -782,11 +1003,10 @@
 
     $$('.tabbar__item').forEach(function (item) {
       item.addEventListener('click', function () {
-        state.history = [];
         var target = item.dataset.tab;
         var currentIndex = TAB_SCREENS.indexOf(state.screen);
         var nextIndex = TAB_SCREENS.indexOf(target);
-        go(target, nextIndex > currentIndex ? 'push' : 'pop');
+        push(target, nextIndex > currentIndex ? 'push' : 'pop');
       });
     });
 
@@ -821,10 +1041,38 @@
 
     $('#btn-logout').addEventListener('click', logout);
 
+    /* Card details */
+    $('#btn-reveal').addEventListener('click', function () { setReveal(!state.revealed); });
+    $('#bankcard-detail').addEventListener('click', function (event) {
+      if (state.revealed && event.target.closest('.bankcard__number')) copyCardNumber();
+    });
+
+    /* Scanner */
+    $('#scanner-close').addEventListener('click', function () { back(); });
+    $('#scanner-retry').addEventListener('click', startCamera);
+
+    /* Exit confirmation */
+    $('#btn-stay').addEventListener('click', function () { closeSheet(); });
+    $('#btn-leave').addEventListener('click', leaveApp);
+
+    global.addEventListener('popstate', onPopState);
+
+    /* Last line of defence for a real tab close or reload. */
+    global.addEventListener('beforeunload', function (event) {
+      if (state.leaving || state.screen === 'login' || state.screen === 'loading') return;
+      event.preventDefault();
+      event.returnValue = '';
+      return '';
+    });
+
+    /* Free the camera if the app is backgrounded. */
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden && state.scanOpen) closeScanner();
+    });
+
     document.addEventListener('keydown', function (event) {
       if (event.key !== 'Escape') return;
-      if (state.sheet) closeSheet();
-      else if (state.screen === 'card') back();
+      if (state.scanOpen || state.sheet || state.history.length) back();
     });
   }
 
@@ -848,9 +1096,12 @@
 
     applyTranslations();
     renderAll();
+    setReveal(false);
     bindEvents();
     updateChrome();
+    resetNavigation();
     registerServiceWorker();
+    maybeAutoBiometrics();
 
     global.addEventListener('offline', function () { toast(t('toast.offline'), 'info'); });
   }

@@ -66,8 +66,26 @@
 
   /* First run on this device: create a platform credential. The OS shows
      its biometric prompt as part of this call. */
+  /* Lets the app withdraw a request the user never answers. */
+  var pending = null;
+
+  function abort() {
+    if (pending) {
+      try { pending.abort(); } catch (e) { /* ignore */ }
+      pending = null;
+    }
+  }
+
+  function signal() {
+    abort();
+    if (typeof AbortController !== 'function') return undefined;
+    pending = new AbortController();
+    return pending.signal;
+  }
+
   function enroll(displayName) {
     return navigator.credentials.create({
+      signal: signal(),
       publicKey: {
         challenge: randomBytes(32),
         rp: { name: 'PrivatB' },
@@ -99,6 +117,7 @@
      the system biometric prompt. */
   function assert(id) {
     return navigator.credentials.get({
+      signal: signal(),
       publicKey: {
         challenge: randomBytes(32),
         allowCredentials: [{ type: 'public-key', id: fromBase64Url(id) }],
@@ -126,6 +145,7 @@
   global.Biometrics = {
     available: available,
     authenticate: authenticate,
+    abort: abort,
     isEnrolled: function () { return !!readStored(); },
     forget: forget
   };

@@ -68,6 +68,11 @@
 <g id="i-send"><path d="M20.5 3.5 10 14"/><path d="M20.5 3.5 14 20.5l-4-6.5-6.5-4z"/></g>
 <g id="i-clock"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.3 2"/></g>
 <g id="i-sliders"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></g>
+<g id="i-close"><path d="m6 6 12 12M18 6 6 18"/></g>
+<g id="i-eye"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3.2"/></g>
+<g id="i-eye-off"><path d="M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.3 4"/><path d="M6.3 7.7A17.6 17.6 0 0 0 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.2-1"/><path d="M9.8 9.9a3.2 3.2 0 0 0 4.4 4.4"/><path d="m3.5 3.5 17 17"/></g>
+<g id="i-copy"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5v-2a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></g>
+<g id="i-camera"><path d="M3.5 8.5a2 2 0 0 1 2-2h1.8l1.2-2h7l1.2 2h1.8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.6"/></g>
 </defs></svg>
 
 <!-- ================================= APP ================================= -->
@@ -78,9 +83,13 @@
   <section class="screen screen--plain is-active" id="screen-login" data-screen="login">
     <div class="login">
       <div class="login__brand">
-        <div class="brandmark brandmark--lg" aria-hidden="true">
-          <span class="brandmark__letter">P</span>
-        </div>
+        <span class="mark mark--lg" aria-hidden="true">
+          <svg class="mark__glyph" viewBox="0 0 100 100">
+            <path class="mark__stroke" pathLength="100"
+                  d="M35 82 V22 H57 a17 17 0 0 1 0 34 H35"/>
+          </svg>
+          <span class="mark__dot"></span>
+        </span>
         <h1 class="login__name">Privat<span>B</span></h1>
         <p class="login__tagline" data-i18n="app.tagline"></p>
       </div>
@@ -121,13 +130,20 @@
   <!-- ------------------------------ LOADING ------------------------------ -->
   <section class="screen screen--plain" id="screen-loading" data-screen="loading">
     <div class="loader">
-      <div class="brandmark brandmark--lg brandmark--beat" aria-hidden="true">
-        <span class="brandmark__letter">P</span>
+      <div class="markwrap" aria-hidden="true">
+        <span class="markwrap__halo"></span>
+        <svg class="markwrap__orbit" viewBox="0 0 140 140">
+          <circle class="markwrap__orbit-track" cx="70" cy="70" r="63"/>
+          <circle class="markwrap__orbit-arc" cx="70" cy="70" r="63"/>
+        </svg>
+        <span class="mark mark--lg mark--animated">
+          <svg class="mark__glyph" viewBox="0 0 100 100">
+            <path class="mark__stroke" pathLength="100"
+                  d="M35 82 V22 H57 a17 17 0 0 1 0 34 H35"/>
+          </svg>
+          <span class="mark__dot"></span>
+        </span>
       </div>
-      <svg class="spinner" viewBox="0 0 50 50" aria-hidden="true">
-        <circle class="spinner__track" cx="25" cy="25" r="20"/>
-        <circle class="spinner__bar" cx="25" cy="25" r="20"/>
-      </svg>
       <p class="loader__title" data-i18n="loading.title"></p>
       <p class="loader__sub" id="load-sub" data-i18n="loading.sub"></p>
       <div class="progress"><div class="progress__bar" id="load-progress"></div></div>
@@ -157,7 +173,16 @@
       <button class="bankcard" id="bankcard-main" type="button">
         <span class="bankcard__shine" aria-hidden="true"></span>
         <span class="bankcard__row bankcard__row--top">
-          <span class="bankcard__brand">Privat<b>B</b></span>
+          <span class="bankcard__brand">
+            <span class="mark mark--sm mark--onCard" aria-hidden="true">
+              <svg class="mark__glyph" viewBox="0 0 100 100">
+                <path class="mark__stroke" pathLength="100"
+                      d="M35 82 V22 H57 a17 17 0 0 1 0 34 H35"/>
+              </svg>
+              <span class="mark__dot"></span>
+            </span>
+            <span class="bankcard__brandtext">Privat<b>B</b></span>
+          </span>
           <span class="bankcard__type" data-i18n="card.type"></span>
         </span>
         <span class="bankcard__chip" aria-hidden="true"></span>
@@ -181,19 +206,19 @@
       </button>
 
       <nav class="quick">
-        <button class="quick__item" data-soon type="button">
+        <button class="quick__item" data-scan="transfer" type="button">
           <span class="quick__ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-send"/></svg></span>
           <span data-i18n="action.transfer"></span>
         </button>
-        <button class="quick__item" data-soon type="button">
+        <button class="quick__item" data-scan="topup" type="button">
           <span class="quick__ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-plus"/></svg></span>
           <span data-i18n="action.topup"></span>
         </button>
-        <button class="quick__item" data-soon type="button">
+        <button class="quick__item" data-scan="payments" type="button">
           <span class="quick__ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-doc"/></svg></span>
           <span data-i18n="action.payments"></span>
         </button>
-        <button class="quick__item" data-soon type="button">
+        <button class="quick__item" data-scan="qr" type="button">
           <span class="quick__ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-qr"/></svg></span>
           <span data-i18n="action.qr"></span>
         </button>
@@ -221,10 +246,19 @@
     </header>
 
     <div class="screen__body">
-      <div class="bankcard bankcard--static">
+      <div class="bankcard bankcard--static" id="bankcard-detail">
         <span class="bankcard__shine" aria-hidden="true"></span>
         <span class="bankcard__row bankcard__row--top">
-          <span class="bankcard__brand">Privat<b>B</b></span>
+          <span class="bankcard__brand">
+            <span class="mark mark--sm mark--onCard" aria-hidden="true">
+              <svg class="mark__glyph" viewBox="0 0 100 100">
+                <path class="mark__stroke" pathLength="100"
+                      d="M35 82 V22 H57 a17 17 0 0 1 0 34 H35"/>
+              </svg>
+              <span class="mark__dot"></span>
+            </span>
+            <span class="bankcard__brandtext">Privat<b>B</b></span>
+          </span>
           <span class="bankcard__type" data-i18n="card.type"></span>
         </span>
         <span class="bankcard__chip" aria-hidden="true"></span>
@@ -233,11 +267,20 @@
         </svg>
         <span class="bankcard__row bankcard__row--mid">
           <span class="bankcard__number" data-card-number></span>
-          <span class="bankcard__valid">
-            <small data-i18n="card.valid"></small>
-            <b data-card-valid></b>
+          <span class="bankcard__secure">
+            <span class="bankcard__cvv">
+              <small data-i18n="card.cvv"></small>
+              <b id="card-cvv"></b>
+            </span>
+            <span class="bankcard__valid">
+              <small data-i18n="card.valid"></small>
+              <b data-card-valid></b>
+            </span>
           </span>
         </span>
+        <button class="bankcard__eye" id="btn-reveal" type="button" aria-pressed="false">
+          <svg class="ico" viewBox="0 0 24 24"><use href="#i-eye" id="reveal-icon"/></svg>
+        </button>
         <span class="bankcard__row bankcard__row--bottom">
           <span class="bankcard__balance">
             <small data-i18n="card.balanceLabel"></small>
@@ -256,7 +299,7 @@
           <span class="quick__ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-plus"/></svg></span>
           <span data-i18n="action.topup"></span>
         </button>
-        <button class="quick__item" data-soon type="button">
+        <button class="quick__item" data-reveal type="button">
           <span class="quick__ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-doc"/></svg></span>
           <span data-i18n="card.requisites"></span>
         </button>
@@ -440,6 +483,42 @@
     <div class="sheet__grip" aria-hidden="true"></div>
     <div id="sheet-product-body"></div>
     <button class="btn btn--ghost btn--block" data-close-sheet type="button" data-i18n="common.close"></button>
+  </div>
+
+  <!-- Exit confirmation, raised when an edge-swipe / back gesture would leave -->
+  <div class="sheet" id="sheet-exit" hidden role="alertdialog" aria-modal="true" aria-labelledby="sheet-exit-title">
+    <div class="sheet__grip" aria-hidden="true"></div>
+    <h2 class="sheet__title" id="sheet-exit-title" data-i18n="exit.title"></h2>
+    <p class="sheet__sub" data-i18n="exit.text"></p>
+    <button class="btn btn--primary btn--block" id="btn-stay" type="button" data-i18n="exit.stay"></button>
+    <button class="btn btn--danger-ghost btn--block" id="btn-leave" type="button" data-i18n="exit.leave"></button>
+  </div>
+
+  <!-- Camera viewfinder for the quick actions (capture only, no decoding) -->
+  <div class="scanner" id="scanner" hidden role="dialog" aria-modal="true">
+    <video class="scanner__video" id="scanner-video" playsinline autoplay muted></video>
+    <div class="scanner__shade" aria-hidden="true"></div>
+
+    <header class="scanner__bar">
+      <button class="icon-btn scanner__close" id="scanner-close" type="button" aria-label="Close">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-close"/></svg>
+      </button>
+      <h2 class="scanner__title" id="scanner-title"></h2>
+    </header>
+
+    <div class="scanner__frame" id="scanner-frame" aria-hidden="true">
+      <i></i><i></i><i></i><i></i>
+      <span class="scanner__laser"></span>
+    </div>
+
+    <p class="scanner__hint" id="scanner-hint"></p>
+
+    <div class="scanner__error" id="scanner-error" hidden>
+      <span class="scanner__error-ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-camera"/></svg></span>
+      <strong id="scanner-error-title"></strong>
+      <span id="scanner-error-text"></span>
+      <button class="btn btn--primary" id="scanner-retry" type="button" data-i18n="scan.retry"></button>
+    </div>
   </div>
 
   <!-- Blocking progress while the PDF is being built -->

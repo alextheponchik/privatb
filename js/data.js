@@ -25,6 +25,10 @@
     mask: '6330',
     masked: '•••• 6330',
     maskedFull: '•••• •••• •••• 6330',
+    /* Deliberately starts with 9 — a range no card network issues, so the
+       number cannot collide with a real payment card. */
+    number: '9720 4417 2085 6330',
+    cvv: '204',
     valid: '09/29',
     balance: 511000.00,
     currency: 'UAH',

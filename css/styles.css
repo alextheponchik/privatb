@@ -221,29 +221,105 @@ input { font: inherit; color: inherit; }
 @keyframes pushIn   { from { opacity: .3; transform: translateX(28px); } }
 @keyframes popIn    { from { opacity: .3; transform: translateX(-28px); } }
 
-/* ------------------------------ BRANDMARK ------------------------------ */
-.brandmark {
+/* --------------------------------- MARK --------------------------------
+   Original PrivatB glyph: a stroked "P" on a rounded tile, with a dot that
+   reads as the counter of the bowl. Drawn as a path so it can animate.
+   ----------------------------------------------------------------------- */
+.mark {
+  position: relative;
   display: grid;
   place-items: center;
   width: 56px; height: 56px;
   border-radius: 18px;
   background: linear-gradient(145deg, var(--green-400), var(--green-700));
   box-shadow: 0 8px 20px rgba(46, 125, 50, .32);
-  color: #fff;
+  flex: none;
 }
-.brandmark--lg { width: 76px; height: 76px; border-radius: 24px; }
-.brandmark__letter {
-  font-size: 38px;
-  font-weight: 800;
-  letter-spacing: -.03em;
-  line-height: 1;
-  transform: translateY(-1px);
+.mark--lg { width: 84px; height: 84px; border-radius: 26px; }
+.mark--sm { width: 26px; height: 26px; border-radius: 9px; box-shadow: none; }
+
+.mark__glyph { width: 68%; height: 68%; overflow: visible; }
+.mark__stroke {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 11;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.brandmark--lg .brandmark__letter { font-size: 46px; }
-.brandmark--beat { animation: beat 1.6s var(--ease) infinite; }
-@keyframes beat {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.07); }
+.mark--sm .mark__stroke { stroke-width: 14; }
+
+/* The counter dot sits inside the bowl of the P. */
+.mark__dot {
+  position: absolute;
+  top: 30%; left: 46%;
+  width: 11%; height: 11%;
+  border-radius: 50%;
+  background: var(--green-200);
+}
+.mark--sm .mark__dot { display: none; }
+
+/* On the card the tile is translucent so it sits on the green gradient. */
+.mark--onCard {
+  background: rgba(255, 255, 255, .18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25);
+}
+
+/* Loader treatment: the glyph draws itself, the tile breathes. */
+.mark--animated { animation: markBreathe 2.6s var(--ease) infinite; }
+.mark--animated .mark__stroke {
+  stroke-dasharray: 100;
+  animation: markDraw 2.6s var(--ease) infinite;
+}
+.mark--animated .mark__dot { animation: markDot 2.6s var(--ease) infinite; }
+
+@keyframes markBreathe {
+  0%, 100% { transform: scale(1);    box-shadow: 0 8px 20px rgba(46, 125, 50, .32); }
+  50%      { transform: scale(1.05); box-shadow: 0 14px 30px rgba(46, 125, 50, .42); }
+}
+@keyframes markDraw {
+  0%       { stroke-dashoffset: 100; }
+  55%, 80% { stroke-dashoffset: 0; }
+  100%     { stroke-dashoffset: -100; }
+}
+@keyframes markDot {
+  0%, 40% { opacity: 0; transform: scale(.2); }
+  60%     { opacity: 1; transform: scale(1.35); }
+  75%     { opacity: 1; transform: scale(1); }
+  100%    { opacity: 0; transform: scale(.2); }
+}
+
+/* Halo + orbiting arc around the loader mark. */
+.markwrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 140px; height: 140px;
+}
+.markwrap__halo {
+  position: absolute;
+  width: 108px; height: 108px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(129, 199, 132, .45), transparent 68%);
+  animation: haloPulse 2.6s var(--ease) infinite;
+}
+@keyframes haloPulse {
+  0%, 100% { opacity: .5; transform: scale(.9); }
+  50%      { opacity: 1;  transform: scale(1.12); }
+}
+
+.markwrap__orbit { position: absolute; inset: 0; width: 140px; height: 140px; }
+.markwrap__orbit circle { fill: none; stroke-width: 3; }
+.markwrap__orbit-track { stroke: var(--green-100); }
+.markwrap__orbit-arc {
+  stroke: var(--green-500);
+  stroke-linecap: round;
+  stroke-dasharray: 62 334;
+  transform-origin: 50% 50%;
+  animation: orbit 1.8s cubic-bezier(.6, .1, .4, .9) infinite;
+}
+@keyframes orbit {
+  from { transform: rotate(-90deg); }
+  to   { transform: rotate(270deg); }
 }
 
 /* -------------------------------- LOGIN -------------------------------- */
@@ -615,8 +691,9 @@ button.bankcard:active {
 
 .bankcard__row { display: flex; align-items: flex-end; justify-content: space-between; }
 .bankcard__row--top { align-items: center; }
-.bankcard__brand { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
-.bankcard__brand b { font-weight: 800; color: var(--green-200); }
+.bankcard__brand { display: flex; align-items: center; gap: 9px; }
+.bankcard__brandtext { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.bankcard__brandtext b { font-weight: 800; color: var(--green-200); }
 .bankcard__type {
   padding: 3px 10px;
   border-radius: 999px;
@@ -670,7 +747,42 @@ button.bankcard:active {
 .bankcard__valid { text-align: right; }
 .bankcard__valid b { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
+/* Card details revealed by the eye toggle */
+.bankcard__secure { display: flex; align-items: flex-end; gap: 14px; }
+.bankcard__cvv {
+  text-align: right;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 220ms var(--ease), max-width 260ms var(--ease);
+}
+.bankcard__cvv small { display: block; font-size: 10px; letter-spacing: .08em;
+                       text-transform: uppercase; opacity: .72; }
+.bankcard__cvv b { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bankcard.is-revealed .bankcard__cvv { opacity: 1; max-width: 60px; }
+
+.bankcard.is-revealed .bankcard__number {
+  font-size: 15.5px;
+  letter-spacing: .08em;
+  cursor: copy;
+}
+
+.bankcard__eye {
+  position: absolute;
+  right: 16px; bottom: 16px;
+  display: grid; place-items: center;
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .16);
+  color: #fff;
+  transition: background 180ms var(--ease), transform 130ms var(--ease);
+}
+.bankcard__eye:active { transform: scale(.92); background: rgba(255, 255, 255, .28); }
+.bankcard__eye .ico { width: 19px; height: 19px; }
+
 .bankcard__mark { display: flex; align-items: center; }
+/* The detail card gives that corner to the reveal toggle instead. */
+.bankcard--static .bankcard__mark { display: none; }
 .bankcard__mark i {
   display: block;
   width: 22px; height: 22px;
@@ -1156,6 +1268,126 @@ button.menu__row:active { background: var(--line-2); }
 }
 .busy__title { font-size: 15px; font-weight: 700; margin-top: 4px; }
 .busy__sub { font-size: 12.5px; color: var(--ink-3); }
+
+/* ------------------------------- SCANNER ------------------------------- */
+.scanner {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  overflow: hidden;
+  background: #05100A;
+  animation: fadeIn 240ms var(--ease) both;
+}
+.scanner.is-hiding { animation: fadeOut 200ms var(--ease) both; }
+
+.scanner__video {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  background: #05100A;
+}
+
+/* Darkens everything outside the framing window. */
+.scanner__shade {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 16, 10, .55);
+}
+
+.scanner__bar {
+  position: absolute;
+  top: calc(var(--safe-t) + 8px);
+  left: 8px; right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (min-width: 720px) { .scanner__bar { top: 44px; } }
+
+.scanner__close { color: #fff; background: rgba(0, 0, 0, .3); }
+.scanner__close:active { background: rgba(0, 0, 0, .5); }
+.scanner__title {
+  flex: 1;
+  padding-right: 46px;
+  text-align: center;
+  color: #fff;
+  font-size: 16px; font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+}
+
+.scanner__frame {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -58%);
+  width: min(74vw, 260px);
+  aspect-ratio: 1 / 1;
+  border-radius: 22px;
+  box-shadow: 0 0 0 100vmax rgba(4, 16, 10, .45);
+  overflow: hidden;
+}
+.scanner__frame i {
+  position: absolute;
+  width: 30px; height: 30px;
+  border: 3px solid var(--green-200);
+}
+.scanner__frame i:nth-child(1) { top: 0; left: 0;  border-right: 0; border-bottom: 0; border-radius: 18px 0 0 0; }
+.scanner__frame i:nth-child(2) { top: 0; right: 0; border-left: 0;  border-bottom: 0; border-radius: 0 18px 0 0; }
+.scanner__frame i:nth-child(3) { bottom: 0; left: 0;  border-right: 0; border-top: 0; border-radius: 0 0 0 18px; }
+.scanner__frame i:nth-child(4) { bottom: 0; right: 0; border-left: 0;  border-top: 0; border-radius: 0 0 18px 0; }
+
+.scanner__laser {
+  position: absolute;
+  left: 6%; right: 6%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--green-200), transparent);
+  box-shadow: 0 0 14px 2px rgba(168, 230, 207, .7);
+  animation: laser 2.4s ease-in-out infinite;
+}
+@keyframes laser {
+  0%, 100% { top: 8%;  opacity: .35; }
+  50%      { top: 90%; opacity: 1; }
+}
+
+.scanner__hint {
+  position: absolute;
+  left: 24px; right: 24px;
+  bottom: calc(var(--safe-b) + 46px);
+  text-align: center;
+  color: rgba(255, 255, 255, .92);
+  font-size: 14px; font-weight: 600;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .6);
+}
+
+.scanner__error {
+  position: absolute;
+  top: 50%; left: 24px; right: 24px;
+  transform: translateY(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 26px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-3);
+  text-align: center;
+  animation: riseIn 300ms var(--ease) both;
+}
+.scanner__error-ico {
+  display: grid; place-items: center;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: var(--green-100);
+  color: var(--accent);
+}
+.scanner__error strong { font-size: 16px; font-weight: 700; }
+.scanner__error span:not(.scanner__error-ico) { font-size: 13px; color: var(--ink-3); }
+.scanner__error .btn { margin-top: 8px; min-height: 44px; padding: 0 24px; }
+
+/* Hide the viewfinder chrome while an error is showing. */
+.scanner.has-error .scanner__frame,
+.scanner.has-error .scanner__hint { display: none; }
 
 /* -------------------------------- TOASTS ------------------------------- */
 .toasts {
