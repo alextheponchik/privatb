@@ -1,7 +1,7 @@
 {
-  "name": "PrivatB — Онлайн-банкінг",
-  "short_name": "PrivatB",
-  "description": "Мобільний банк PrivatB: картки, вклади, кредити, виписки та сповіщення.",
+  "name": "PrivatBank — Онлайн-банкінг",
+  "short_name": "PrivatBank",
+  "description": "Мобільний банк PrivatBank: картки, вклади, кредити, виписки та сповіщення.",
   "lang": "uk",
   "dir": "ltr",
   "start_url": "./index.html",
