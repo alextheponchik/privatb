@@ -6,12 +6,12 @@
   'use strict';
 
   /* ------------------------------------------------------------------
-   * DEMO MARKING — the only place it is configured.
+   * DEMO MARKING
    *
-   * The rest of this file lays the document out like a real bank
-   * statement, so each page is marked as a sample. Flip these to false
-   * and nothing else in the app changes; the resulting PDF would simply
-   * no longer identify itself as a prototype output.
+   * This file lays the document out like a real bank statement, so the
+   * output identifies itself as a sample. That marking is deliberate
+   * and stays in: an unmarked copy of this PDF would function as a
+   * financial document rather than as a UI prototype's output.
    * ------------------------------------------------------------------ */
   var DEMO_MARK = {
     watermark: true,   /* diagonal "ЗРАЗОК" / "SPECIMEN" behind the content */

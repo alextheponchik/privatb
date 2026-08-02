@@ -9,12 +9,12 @@
   'use strict';
 
   var USER = {
-    firstName: { ua: 'Олександр', en: 'Oleksandr' },
+    firstName: { ua: 'Анастасія', en: 'Anastasiia' },
     fullName: {
-      ua: 'Ковальчук Олександр Ігорович',
-      en: 'Kovalchuk Oleksandr Ihorovych'
+      ua: 'Ковальчук Анастасія Ігорівна',
+      en: 'Kovalchuk Anastasiia Ihorivna'
     },
-    initials: 'ОК',
+    initials: 'АК',
     phone: '+380 67 ••• 41 20',
     since: 2018
   };
@@ -28,8 +28,8 @@
     valid: '09/29',
     balance: 511000.00,
     currency: 'UAH',
-    iban: 'UA76 3052 9900 0002 6001 2345 6789 0',
-    ibanMasked: 'UA76 3052 99•• •••• •••• •••• 6789 0'
+    iban: 'UA76 9999 9900 0002 6001 2345 6789 0',
+    ibanMasked: 'UA76 9999 99•• •••• •••• •••• 6789 0'
   };
 
   var DEPOSIT = {

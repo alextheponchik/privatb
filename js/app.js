@@ -34,7 +34,10 @@
     history: [],
     period: 'week',
     sheet: null,
-    busyMin: 1100
+    busyMin: 1100,
+    loadTimers: [],
+    cardTimer: null,
+    cardLoading: false
   };
 
   /* ---------------------------------------------------------------- utils */
@@ -195,6 +198,53 @@
     D.transactions.slice(0, 4).forEach(function (tx, i) { host.appendChild(txRow(tx, i)); });
   }
 
+  /* Placeholder shown while the card's spending history "loads". */
+  function renderHistoryLoader() {
+    var host = $('#tx-history');
+    clear(host);
+
+    var head = el('div', 'loading-row');
+    var spinner = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    spinner.setAttribute('class', 'spinner spinner--xs');
+    spinner.setAttribute('viewBox', '0 0 50 50');
+    ['spinner__track', 'spinner__bar'].forEach(function (cls) {
+      var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('class', cls);
+      c.setAttribute('cx', '25'); c.setAttribute('cy', '25'); c.setAttribute('r', '20');
+      spinner.appendChild(c);
+    });
+    head.appendChild(spinner);
+    head.appendChild(el('span', null, t('card.loading')));
+    host.appendChild(head);
+
+    var list = el('ul', 'tx-list');
+    for (var i = 0; i < 6; i++) {
+      var row = el('li', 'tx tx--skeleton');
+      row.style.animationDelay = i * 60 + 'ms';
+      row.appendChild(el('span', 'skeleton skeleton--ico'));
+      var body = el('span', 'tx__body');
+      body.appendChild(el('span', 'skeleton skeleton--line'));
+      body.appendChild(el('span', 'skeleton skeleton--line skeleton--short'));
+      row.appendChild(body);
+      row.appendChild(el('span', 'skeleton skeleton--amount'));
+      list.appendChild(row);
+    }
+    host.appendChild(list);
+  }
+
+  /* Enter the card screen with a short load before the history appears. */
+  function openCard() {
+    push('card');
+    state.cardLoading = true;
+    renderHistoryLoader();
+
+    clearTimeout(state.cardTimer);
+    state.cardTimer = setTimeout(function () {
+      state.cardLoading = false;
+      renderHistory();
+    }, 2000);
+  }
+
   /* Full history on the card screen, grouped by month. */
   function renderHistory() {
     var host = $('#tx-history');
@@ -333,7 +383,7 @@
     figures.appendChild(main);
     var cta = el('button', 'pcard__cta', t('common.more'));
     cta.type = 'button';
-    cta.addEventListener('click', function () { push('card'); });
+    cta.addEventListener('click', openCard);
     figures.appendChild(cta);
     card.appendChild(figures);
     return card;
@@ -392,7 +442,8 @@
   function renderAll() {
     renderIdentity();
     renderRecent();
-    renderHistory();
+    /* Don't stomp on an in-flight card load (e.g. language switched mid-load). */
+    if (state.cardLoading) renderHistoryLoader(); else renderHistory();
     renderProducts();
     renderNotifications();
     syncDateInputs();
@@ -556,55 +607,108 @@
 
   /* ----------------------------------------------------------- login flow */
 
+  function setLoginStatus(key, tone) {
+    var status = $('#login-status');
+    status.textContent = t(key);
+    status.classList.toggle('is-ok', tone === 'ok');
+    status.classList.toggle('is-error', tone === 'error');
+  }
+
+  /* Used only when the device has no platform authenticator, so the
+     scanner still demonstrates the interaction. */
+  function simulateScan() {
+    return new Promise(function (resolve) { setTimeout(resolve, 2000); });
+  }
+
   function runBiometrics() {
     var scanner = $('#btn-biometric');
-    if (scanner.classList.contains('is-scanning') || scanner.classList.contains('is-done')) return;
+    if (scanner.dataset.busy === '1') return;
 
+    scanner.dataset.busy = '1';
+    scanner.classList.remove('is-done', 'is-failed');
     scanner.classList.add('is-scanning');
-    $('#login-status').textContent = t('login.scanning');
-    $('#login-status').classList.remove('is-ok');
+    setLoginStatus('login.scanning');
     $('#btn-login').disabled = true;
 
-    setTimeout(function () {
+    global.Biometrics.available().then(function (hasPlatformAuth) {
+      if (!hasPlatformAuth) {
+        toast(t('login.noBiometry'), 'info');
+        return simulateScan();
+      }
+      /* Swap the timed ring for an indeterminate one: the system sheet
+         stays up for as long as the user needs. */
       scanner.classList.remove('is-scanning');
+      scanner.classList.add('is-waiting');
+      setLoginStatus('login.prompt');
+      return global.Biometrics.authenticate(D.user.fullName[i18n.lang]);
+    }).then(function () {
+      scanner.classList.remove('is-scanning', 'is-waiting');
       scanner.classList.add('is-done');
-      var status = $('#login-status');
-      status.textContent = t('login.success');
-      status.classList.add('is-ok');
+      setLoginStatus('login.success', 'ok');
+      setTimeout(showLoading, 520);
+    }).catch(function (err) {
+      scanner.classList.remove('is-scanning', 'is-waiting');
+      scanner.classList.add('is-failed');
+      scanner.dataset.busy = '';
+      $('#btn-login').disabled = false;
 
-      setTimeout(showLoading, 480);
-    }, 2000);
+      var cancelled = err && err.name === 'NotAllowedError';
+      setLoginStatus(cancelled ? 'login.cancelled' : 'login.failed', 'error');
+      toast(t(cancelled ? 'login.cancelled' : 'login.failed'), 'info');
+      if (!cancelled) console.warn('[biometrics]', err);
+    });
   }
+
+  var LOADING_MS = 5000;
 
   function showLoading() {
     go('loading');
 
     var bar = $('#load-progress');
+    var sub = $('#load-sub');
     bar.style.width = '0%';
-    var steps = [18, 46, 74, 100];
-    steps.forEach(function (pct, i) {
-      setTimeout(function () { bar.style.width = pct + '%'; }, 120 + i * 400);
+
+    /* Six ticks spread across the five seconds, each with its own caption. */
+    var ticks = [
+      { pct: 12,  key: 'loading.sub1' },
+      { pct: 31,  key: 'loading.sub1' },
+      { pct: 52,  key: 'loading.sub2' },
+      { pct: 71,  key: 'loading.sub2' },
+      { pct: 88,  key: 'loading.sub3' },
+      { pct: 100, key: 'loading.sub3' }
+    ];
+    var step = (LOADING_MS - 200) / ticks.length;
+
+    state.loadTimers.forEach(clearTimeout);
+    state.loadTimers = ticks.map(function (tick, i) {
+      return setTimeout(function () {
+        bar.style.width = tick.pct + '%';
+        sub.textContent = t(tick.key);
+      }, 150 + i * step);
     });
 
-    setTimeout(function () {
+    state.loadTimers.push(setTimeout(function () {
       state.history = [];
       go('dashboard');
       toast(t('toast.login'));
       resetLogin();
-    }, 1900);
+    }, LOADING_MS));
   }
 
   function resetLogin() {
     var scanner = $('#btn-biometric');
-    scanner.classList.remove('is-scanning', 'is-done');
-    var status = $('#login-status');
-    status.textContent = t('login.hint');
-    status.classList.remove('is-ok');
+    scanner.classList.remove('is-scanning', 'is-waiting', 'is-done', 'is-failed');
+    scanner.dataset.busy = '';
+    setLoginStatus('login.hint');
     $('#btn-login').disabled = false;
   }
 
   function logout() {
     closeSheet(true);
+    state.loadTimers.forEach(clearTimeout);
+    state.loadTimers = [];
+    clearTimeout(state.cardTimer);
+    state.cardLoading = false;
     state.history = [];
     go('login');
     resetLogin();
@@ -645,7 +749,10 @@
       if (soon) { toast(t('common.soon'), 'info'); return; }
 
       var goTo = event.target.closest('[data-go]');
-      if (goTo) { push(goTo.dataset.go); return; }
+      if (goTo) {
+        if (goTo.dataset.go === 'card') openCard(); else push(goTo.dataset.go);
+        return;
+      }
 
       var backBtn = event.target.closest('[data-back]');
       if (backBtn) { back(); return; }
@@ -666,7 +773,12 @@
     $('#btn-login').addEventListener('click', runBiometrics);
     $('#btn-biometric').addEventListener('click', runBiometrics);
 
-    $('#bankcard-main').addEventListener('click', function () { push('card'); });
+    $('#bankcard-main').addEventListener('click', openCard);
+
+    $('#btn-reset-bio').addEventListener('click', function () {
+      global.Biometrics.forget();
+      toast(t('toast.bioReset'));
+    });
 
     $$('.tabbar__item').forEach(function (item) {
       item.addEventListener('click', function () {
