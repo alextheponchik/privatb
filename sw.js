@@ -4,7 +4,7 @@
    ================================================================== */
 'use strict';
 
-var CACHE = 'privatb-v5';
+var CACHE = 'privatb-v6';
 
 var PRECACHE = [
   './',
