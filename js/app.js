@@ -98,6 +98,8 @@
     if (!i18n.set(lang)) return;
     applyTranslations();
     renderAll();
+    /* Module screens build their own markup, so redraw the visible one. */
+    global.Modules.refresh(state.screen);
     toast(t('toast.langChanged'));
   }
 
@@ -210,7 +212,8 @@
     var isApp = state.screen !== 'login' && state.screen !== 'loading';
     $('#tabbar').hidden = !isApp;
 
-    var activeTab = state.screen === 'card' ? 'dashboard' : state.screen;
+    /* Drill-downs and quick-action modules all hang off Home. */
+    var activeTab = TAB_SCREENS.indexOf(state.screen) === -1 ? 'dashboard' : state.screen;
     $$('.tabbar__item').forEach(function (item) {
       item.classList.toggle('is-active', item.dataset.tab === activeTab);
     });
@@ -644,16 +647,19 @@
     }
   }
 
-  function copyCardNumber() {
-    var plain = D.card.number.replace(/\s/g, '');
-    var done = function () { toast(t('card.copied')); };
+  function copyText(text, message) {
     var failed = function () { toast(t('card.copyFailed'), 'info'); };
-
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(plain).then(done).catch(failed);
+      navigator.clipboard.writeText(text)
+        .then(function () { toast(message); })
+        .catch(failed);
       return;
     }
     failed();
+  }
+
+  function copyCardNumber() {
+    copyText(D.card.number.replace(/\s/g, ''), t('card.copied'));
   }
 
   /* ------------------------------------------------------------- scanner */
@@ -971,7 +977,12 @@
 
       var goTo = event.target.closest('[data-go]');
       if (goTo) {
-        if (goTo.dataset.go === 'card') openCard(); else push(goTo.dataset.go);
+        var target = goTo.dataset.go;
+        if (target === 'card') openCard();
+        else {
+          if (global.Modules.owns(target)) global.Modules.enter(target);
+          push(target);
+        }
         return;
       }
 
@@ -1093,6 +1104,8 @@
     var savedTheme = null;
     try { savedTheme = localStorage.getItem('privatb.theme'); } catch (e) { /* ignore */ }
     setTheme(savedTheme === 'dark', true);
+
+    global.Modules.init({ toast: toast, back: back, copy: copyText });
 
     applyTranslations();
     renderAll();

@@ -4,7 +4,7 @@
    ================================================================== */
 'use strict';
 
-var CACHE = 'privatb-v3';
+var CACHE = 'privatb-v4';
 
 var PRECACHE = [
   './',
@@ -16,6 +16,7 @@ var PRECACHE = [
   './js/data.js',
   './js/biometrics.js',
   './js/statement.js',
+  './js/modules.js',
   './js/app.js',
   './vendor/jspdf.umd.min.js',
   './vendor/fonts-ptsans.js',

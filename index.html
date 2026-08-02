@@ -83,13 +83,6 @@
   <section class="screen screen--plain is-active" id="screen-login" data-screen="login">
     <div class="login">
       <div class="login__brand">
-        <span class="mark mark--lg" aria-hidden="true">
-          <svg class="mark__glyph" viewBox="0 0 100 100">
-            <path class="mark__stroke" pathLength="100"
-                  d="M35 82 V22 H57 a17 17 0 0 1 0 34 H35"/>
-          </svg>
-          <span class="mark__dot"></span>
-        </span>
         <h1 class="login__name">Privat<span>B</span></h1>
         <p class="login__tagline" data-i18n="app.tagline"></p>
       </div>
@@ -206,15 +199,15 @@
       </button>
 
       <nav class="quick">
-        <button class="quick__item" data-scan="transfer" type="button">
+        <button class="quick__item" data-go="transfer" type="button">
           <span class="quick__ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-send"/></svg></span>
           <span data-i18n="action.transfer"></span>
         </button>
-        <button class="quick__item" data-scan="topup" type="button">
+        <button class="quick__item" data-go="topup" type="button">
           <span class="quick__ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-plus"/></svg></span>
           <span data-i18n="action.topup"></span>
         </button>
-        <button class="quick__item" data-scan="payments" type="button">
+        <button class="quick__item" data-go="payments" type="button">
           <span class="quick__ico"><svg class="ico" viewBox="0 0 24 24"><use href="#i-doc"/></svg></span>
           <span data-i18n="action.payments"></span>
         </button>
@@ -312,6 +305,42 @@
       <h2 class="section-title" data-i18n="card.history"></h2>
       <div id="tx-history"></div>
     </div>
+  </section>
+
+  <!-- ------------------------- MODULE: TRANSFER --------------------------- -->
+  <section class="screen screen--scroll" id="screen-transfer" data-screen="transfer">
+    <header class="topbar topbar--sub">
+      <button class="icon-btn" data-back type="button" aria-label="Back">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg>
+      </button>
+      <h1 class="topbar__title" data-i18n="tr.title"></h1>
+      <span class="topbar__spacer" aria-hidden="true"></span>
+    </header>
+    <div class="screen__body" id="transfer-body"></div>
+  </section>
+
+  <!-- --------------------------- MODULE: TOP UP --------------------------- -->
+  <section class="screen screen--scroll" id="screen-topup" data-screen="topup">
+    <header class="topbar topbar--sub">
+      <button class="icon-btn" data-back type="button" aria-label="Back">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg>
+      </button>
+      <h1 class="topbar__title" data-i18n="tu.title"></h1>
+      <span class="topbar__spacer" aria-hidden="true"></span>
+    </header>
+    <div class="screen__body" id="topup-body"></div>
+  </section>
+
+  <!-- -------------------------- MODULE: PAYMENTS -------------------------- -->
+  <section class="screen screen--scroll" id="screen-payments" data-screen="payments">
+    <header class="topbar topbar--sub">
+      <button class="icon-btn" data-back type="button" aria-label="Back">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-chevron-left"/></svg>
+      </button>
+      <h1 class="topbar__title" data-i18n="pay.title"></h1>
+      <span class="topbar__spacer" aria-hidden="true"></span>
+    </header>
+    <div class="screen__body" id="payments-body"></div>
   </section>
 
   <!-- ----------------------------- PRODUCTS ------------------------------ -->
@@ -544,6 +573,7 @@
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/fonts-ptsans.js"></script>
 <script src="js/statement.js"></script>
+<script src="js/modules.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

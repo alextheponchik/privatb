@@ -109,6 +109,55 @@
     }
   ];
 
+  /* Biller catalogue for the Payments module.
+     `field` picks the input the provider needs: an account number or a phone. */
+  var PAYMENT_CATEGORIES = [
+    {
+      id: 'utilities', icon: 'home', nameKey: 'pay.cat.utilities', field: 'account',
+      providers: [
+        { ua: 'Міськводоканал',   en: 'City Water Utility' },
+        { ua: 'Обленерго',        en: 'Regional Power Grid' },
+        { ua: 'Міськгаз',         en: 'City Gas' },
+        { ua: 'ОСББ «Липки»',     en: 'HOA “Lypky”' }
+      ]
+    },
+    {
+      id: 'mobile', icon: 'phone', nameKey: 'pay.cat.mobile', field: 'phone',
+      providers: [
+        { ua: 'Мобілайн',         en: 'Mobiline' },
+        { ua: 'Теленет Мобайл',   en: 'Telenet Mobile' },
+        { ua: 'Хвиля',            en: 'Khvylia' }
+      ]
+    },
+    {
+      id: 'internet', icon: 'globe', nameKey: 'pay.cat.internet', field: 'account',
+      providers: [
+        { ua: 'Домашня мережа',   en: 'Home Network' },
+        { ua: 'Фібра Про',        en: 'Fibra Pro' }
+      ]
+    },
+    {
+      id: 'tv', icon: 'monitor', nameKey: 'pay.cat.tv', field: 'account',
+      providers: [
+        { ua: 'ТВ Онлайн',        en: 'TV Online' },
+        { ua: 'Медіа Плюс',       en: 'Media Plus' }
+      ]
+    },
+    {
+      id: 'education', icon: 'kids', nameKey: 'pay.cat.education', field: 'account',
+      providers: [
+        { ua: 'Дитячий садок №12', en: 'Kindergarten No. 12' },
+        { ua: 'Школа №145',        en: 'School No. 145' }
+      ]
+    },
+    {
+      id: 'fines', icon: 'shield', nameKey: 'pay.cat.fines', field: 'account',
+      providers: [
+        { ua: 'Штрафи за порушення ПДР', en: 'Traffic fines' }
+      ]
+    }
+  ];
+
   /* Merchant/counterparty labels reused across transactions. */
   var M = {
     silpo:    { ua: 'Сільпо',             en: 'Silpo' },
@@ -266,6 +315,7 @@
     deposit: DEPOSIT,
     credit: CREDIT,
     offers: OFFERS,
+    paymentCategories: PAYMENT_CATEGORIES,
     notifications: NOTIFICATIONS,
     transactions: TRANSACTIONS,
     openingBalance: OPENING_BALANCE,
